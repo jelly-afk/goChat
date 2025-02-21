@@ -3,15 +3,18 @@ package main
 import (
 	"database/sql"
 	"flag"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
 	"net/http"
 	"os"
+
+	_ "github.com/go-sql-driver/mysql"
+	"go.chat/internal/models"
 )
 
 type application struct {
 	errorLog *log.Logger
 	infoLog  *log.Logger
+	users    *models.UserModel
 }
 
 func main() {
@@ -29,6 +32,7 @@ func main() {
 	app := &application{
 		errorLog: errorlog,
 		infoLog:  infolog,
+		users:    &models.UserModel{DB: db},
 	}
 	srv := &http.Server{
 		Addr:     *addr,
