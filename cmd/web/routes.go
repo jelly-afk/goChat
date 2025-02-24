@@ -3,15 +3,20 @@ package main
 import (
 	"net/http"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/justinas/alice"
 )
 
 func (app *application) routes() http.Handler {
-	mux := http.NewServeMux()
+	router := httprouter.New()
 
-	mux.HandleFunc("/", app.home)
-	mux.HandleFunc("/users/create", app.userCreate)
+	router.NotFound = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		app.notFound(w)
+	})
+	router.HandlerFunc(http.MethodGet, "/", app.home)
+	router.HandlerFunc(http.MethodPost, "/user/register", app.userRegister)
+	router.HandlerFunc(http.MethodPost, "/user/login", app.userLogin)
 
 	standard := alice.New(app.recoverPanic, app.logRequest, secureHeaders)
-	return standard.Then(mux)
+	return standard.Then(router)
 }

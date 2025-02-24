@@ -6,21 +6,21 @@ import (
 )
 
 type User struct {
-	ID       int
-	Username string
-	Email    string
-	Password string
-	Created  time.Time
+	ID             int
+	Username       string
+	Email          string
+	HashedPassword []byte
+	Created        time.Time
 }
 
 type UserModel struct {
 	DB *sql.DB
 }
 
-func (m *UserModel) Insert(username, email, Password string) (int, error) {
+func (m *UserModel) Insert(username, email, password string) (int, error) {
 	q := `INSERT INTO users (username, email, password, created)
           VALUES (?, ?, ?, UTC_TIMESTAMP())`
-	result, err := m.DB.Exec(q, username, email, Password)
+	result, err := m.DB.Exec(q, username, email, password)
 	if err != nil {
 		return 0, err
 	}
@@ -31,4 +31,11 @@ func (m *UserModel) Insert(username, email, Password string) (int, error) {
 
 	return int(id), nil
 
+}
+
+func (m *UserModel) Authenticate(email, password string) (int, error) {
+	return 0, nil
+}
+func (m *UserModel) Exists(id int) (bool, error) {
+	return false, nil
 }
