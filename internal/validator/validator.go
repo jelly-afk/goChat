@@ -1,6 +1,9 @@
 package validator
 
-import "strings"
+import (
+	"strings"
+	"unicode/utf8"
+)
 
 type Validator struct {
 	FieldErrors map[string]string
@@ -25,6 +28,10 @@ func (v *Validator) CheckField(ok bool, key, message string) {
 	}
 }
 
-func (v *Validator) NotBlank(s string) bool {
+func NotBlank(s string) bool {
 	return strings.TrimSpace(s) != ""
+}
+
+func MaxChars(s string, n int) bool {
+	return utf8.RuneCountInString(s) <= n
 }

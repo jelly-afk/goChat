@@ -1,15 +1,16 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"go.chat/internal/validator"
 )
 
 type userRegisterForm struct {
-	email    string
-	username string
-	password string
+	Email    string
+	Username string
+	Password string
 	validator.Validator
 }
 
@@ -24,12 +25,28 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	form := userRegisterForm{
-		email:    r.PostForm.Get("email"),
-		username: r.PostForm.Get("username"),
-		password: r.PostForm.Get("password"),
+		Email:    r.PostForm.Get("email"),
+		Username: r.PostForm.Get("username"),
+		Password: r.PostForm.Get("password"),
 	}
 
-	id, err := app.users.Insert(username, email, password)
+	form.CheckField(validator.NotBlank(form.Email), "email", "invalid email")
+	form.CheckField(validator.NotBlank(form.Username), "username", "this field cannot be empty")
+	form.CheckField(validator.NotBlank(form.Password), "password", "this field cannot be empty")
+	form.CheckField(validator.MaxChars(form.Username, 20), "username", "this field cannot have more than 20 characters long")
+
+	if !form.Valid() {
+		w.Header().Set("Content-Type", "application/json")
+		err := json.NewEncoder(w).Encode(form.FieldErrors)
+		if err != nil {
+			app.serverError(w, err)
+			return
+		}
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	id, err := app.users.Insert(form.Username, form.Email, form.Password)
 	if err != nil {
 		app.serverError(w, err)
 		return
