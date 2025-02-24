@@ -18,7 +18,7 @@ type UserModel struct {
 }
 
 func (m *UserModel) Insert(username, email, password string) (int, error) {
-	q := `INSERT INTO users (username, email, password, created)
+	q := `INSERT INTO users (username, email, hashed_password, created)
           VALUES (?, ?, ?, UTC_TIMESTAMP())`
 	result, err := m.DB.Exec(q, username, email, password)
 	if err != nil {
