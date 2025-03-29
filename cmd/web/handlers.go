@@ -4,12 +4,19 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"go.chat/internal/models"
 	"go.chat/internal/validator"
 )
 
 type userRegisterForm struct {
 	Email    string
 	Username string
+	Password string
+	validator.Validator
+}
+
+type userLoginForm struct {
+	Email    string
 	Password string
 	validator.Validator
 }
@@ -61,14 +68,14 @@ func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
 		app.clientError(w, http.StatusBadRequest)
 		return
 	}
-	form := userRegisterForm{
+	form := userLoginForm{
 		Email:    r.PostForm.Get("email"),
 		Password: r.PostForm.Get("password"),
 	}
 
-	form.CheckField(validator.NotBlank(form.Email), "username", "this field cannot be empty")
+	form.CheckField(validator.NotBlank(form.Email), "email", "this field cannot be empty")
 	form.CheckField(validator.NotBlank(form.Password), "password", "this field cannot be empty")
-	form.CheckField(validator.NotBlank(form.Email), "email", "invalid email")
+	form.CheckField(validator.Matches(validator.EmailRX, form.Email), "email", "invalid email")
 
 	if !form.Valid() {
 		w.Header().Set("Content-Type", "application/json")
@@ -77,15 +84,26 @@ func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
 			app.serverError(w, err)
 			return
 		}
-	
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	id, err := app.users.Insert(form.Username, form.Email, form.Password)
+	id, err := app.users.Authenticate(form.Email, form.Password)
 	if err != nil {
+		if err == models.ErrInvalidCredentials {
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Invalid email or password",
+			})
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
 		app.serverError(w, err)
 		return
 	}
-	app.infoLog.Println("id: ", id)
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]int{
+		"id": id,
+	})
 }
