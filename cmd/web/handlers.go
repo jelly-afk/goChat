@@ -42,15 +42,30 @@ func (app *application) userRegister(w http.ResponseWriter, r *http.Request) {
 	form.CheckField(validator.NotBlank(form.Password), "password", "this field cannot be empty")
 	form.CheckField(validator.NotBlank(form.Email), "email", "invalid email")
 	form.CheckField(validator.MaxChars(form.Username, 20), "username", "this field cannot have more than 20 characters long")
-
+	emailExist, err := app.users.ExistsEmail(form.Email)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	if emailExist {
+		form.AddFieldError("email", "email already exists")
+	}
+	usernameExist, err := app.users.ExistsUsername(form.Username)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+	if usernameExist {
+		form.AddFieldError("username", "username already exists")
+	}
 	if !form.Valid() {
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
 		err := json.NewEncoder(w).Encode(form.FieldErrors)
 		if err != nil {
 			app.serverError(w, err)
 			return
 		}
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -79,12 +94,12 @@ func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
 
 	if !form.Valid() {
 		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
 		err := json.NewEncoder(w).Encode(form.FieldErrors)
 		if err != nil {
 			app.serverError(w, err)
 			return
 		}
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -92,18 +107,36 @@ func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if err == models.ErrInvalidCredentials {
 			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(map[string]string{
 				"error": "Invalid email or password",
 			})
-			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 		app.serverError(w, err)
 		return
 	}
 
+	token, err := app.jwt.GenerateToken(id, form.Email)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	// Set the token in a secure HTTP-only cookie
+	http.SetCookie(w, &http.Cookie{
+		Name:     "token",
+		Value:    token,
+		Path:     "/",
+		MaxAge:   24 * 60 * 60, // 24 hours
+		HttpOnly: true,
+		Secure:   true, // Only send cookie over HTTPS
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]int{
+	json.NewEncoder(w).Encode(map[string]any{
 		"id": id,
 	})
 }

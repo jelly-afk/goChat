@@ -42,12 +42,8 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 	var id int
 	var hashedPassword []byte
 
-	hPassword, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	if err != nil {
-		return 0, err
-	}
 	q := `SELECT id, hashed_password FROM users WHERE email = ?`
-	err = m.DB.QueryRow(q, email).Scan(&id, &hashedPassword)
+	err := m.DB.QueryRow(q, email).Scan(&id, &hashedPassword)
 	if err == sql.ErrNoRows {
 		return 0, ErrInvalidCredentials
 	}
@@ -55,7 +51,7 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 		return 0, err
 	}
 
-	err = bcrypt.CompareHashAndPassword(hashedPassword, hPassword)
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err == bcrypt.ErrMismatchedHashAndPassword {
 		return 0, ErrInvalidCredentials
 	}
@@ -66,11 +62,31 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 	return id, nil
 }
 
-func (m *UserModel) Exists(id int) (bool, error) {
+func (m *UserModel) ExistsId(id int) (bool, error) {
 	var exists bool
 
-	q := `SELECT EXISTS(SELECT true FROM users WHERE id = ?)`
+	q := `SELECT EXISTS(SELECT true FROM users WHERE id = ?);`
 	err := m.DB.QueryRow(q, id).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (m *UserModel) ExistsEmail(email string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(SELECT true FROM users WHERE email = ?);`
+	err := m.DB.QueryRow(q, email).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+func (m *UserModel) ExistsUsername(username string) (bool, error) {
+	var exists bool
+	q := `SELECT EXISTS(SELECT true FROM users WHERE username = ?);`
+	err := m.DB.QueryRow(q, username).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
