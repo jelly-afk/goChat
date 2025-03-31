@@ -7,7 +7,7 @@ A real-time chat application built with Go and WebSockets.
 - User authentication with JWT
 - Real-time messaging using WebSockets
 - Public and private chat rooms
-- Message persistence in PostgreSQL
+- Message persistence in MySQL
 
 ## Setup
 
