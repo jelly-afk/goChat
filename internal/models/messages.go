@@ -18,13 +18,17 @@ type MessageModel struct {
 }
 
 func (m *MessageModel) Insert(chatID, senderID int, content string) (int, error) {
-	var id int
-	q := `INSERT INTO messages (chat_id, sender_id, content) VALUES (?, ?, ?) RETURNING id`
-	err := m.DB.QueryRow(q, chatID, senderID, content).Scan(&id)
+	q := `INSERT INTO messages (chat_id, sender_id, content, created) VALUES (?, ?, ?, UTC_TIMESTAMP())`
+	result, err := m.DB.Exec(q, chatID, senderID, content)
 	if err != nil {
 		return 0, err
 	}
-	return id, nil
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
 func (m *MessageModel) GetByChatID(chatID int) ([]*Message, error) {

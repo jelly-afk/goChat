@@ -17,13 +17,17 @@ type ParticipantModel struct {
 }
 
 func (m *ParticipantModel) Insert(chatID, userID int) (int, error) {
-	var id int
-	q := `INSERT INTO participants (chat_id, user_id) VALUES (?, ?) RETURNING id`
-	err := m.DB.QueryRow(q, chatID, userID).Scan(&id)
+	q := `INSERT INTO participants (chat_id, user_id, created) VALUES (?, ?, UTC_TIMESTAMP())`
+	result, err := m.DB.Exec(q, chatID, userID)
 	if err != nil {
 		return 0, err
 	}
-	return id, nil
+
+	id, err := result.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	return int(id), nil
 }
 
 func (m *ParticipantModel) GetByChatID(chatID int) ([]*Participant, error) {

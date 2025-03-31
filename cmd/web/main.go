@@ -13,10 +13,14 @@ import (
 )
 
 type application struct {
-	errorLog *log.Logger
-	infoLog  *log.Logger
-	users    *models.UserModel
-	jwt      *jwt.Manager
+	errorLog     *log.Logger
+	infoLog      *log.Logger
+	users        *models.UserModel
+	jwt          *jwt.Manager
+	chats        *models.ChatModel
+	messages     *models.MessageModel
+	participants *models.ParticipantModel
+	hub          *Hub
 }
 
 func main() {
@@ -33,11 +37,18 @@ func main() {
 	}
 	defer db.Close()
 	app := &application{
-		errorLog: errorlog,
-		infoLog:  infolog,
-		users:    &models.UserModel{DB: db},
-		jwt:      jwt.NewManager(*secretKey),
+		errorLog:     errorlog,
+		infoLog:      infolog,
+		users:        &models.UserModel{DB: db},
+		jwt:          jwt.NewManager(*secretKey),
+		chats:        &models.ChatModel{DB: db},
+		messages:     &models.MessageModel{DB: db},
+		participants: &models.ParticipantModel{DB: db},
+		hub:          newHub(),
 	}
+
+	go app.hub.run()
+
 	srv := &http.Server{
 		Addr:     *addr,
 		ErrorLog: errorlog,
