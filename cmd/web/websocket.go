@@ -13,7 +13,6 @@ type Client struct {
 	conn   *websocket.Conn
 	send   chan []byte
 	userID int
-	mu     sync.RWMutex
 }
 
 type Hub struct {
@@ -30,7 +29,6 @@ type Message struct {
 	ChatID  int    `json:"chat_id"`
 	UserID  int    `json:"user_id"`
 }
-
 
 func newHub() *Hub {
 	return &Hub{
